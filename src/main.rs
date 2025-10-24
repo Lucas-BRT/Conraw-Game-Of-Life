@@ -1,89 +1,137 @@
 use rand::Rng;
-use std::{io::stdin, thread, time::Duration};
+use std::{io::stdin, thread, time::Duration, usize};
 
 const WORLD_SIZE: usize = 30;
-const FRAME_TIME: usize = 10 / 1;
+const FRAME_TIME: usize = 10;
 
 #[derive(Debug, Clone, Copy)]
 struct Cell {
     alive: bool,
-    x: usize,
-    y: usize,
+    position: Position,
 }
 
 impl Cell {
     fn new(x: usize, y: usize) -> Self {
-        Self { alive: false, x, y }
+        Self {
+            alive: false,
+            position: Position { x, y },
+        }
     }
 
     fn new_alive(x: usize, y: usize) -> Self {
-        Self { alive: true, x, y }
+        Self {
+            alive: true,
+            position: Position { x, y },
+        }
     }
 }
 
-struct Dimensions {
+#[derive(Debug, Clone, Copy)]
+struct Position {
     x: usize,
     y: usize,
 }
 
+impl Position {
+    fn new(x: usize, y: usize) -> Self {
+        Self { x, y }
+    }
+}
+
 struct World {
-    dimension: Dimensions,
+    population: u64,
+    position: Position,
     space: Vec<Vec<Cell>>,
 }
 
 impl World {
-    fn new(dimensions: Dimensions) -> Self {
+    fn new(position: Position) -> Self {
         let mut space = Vec::new();
 
-        for y in 0..dimensions.y {
+        for y in 0..position.y {
             space.push(Vec::new());
 
-            for x in 0..dimensions.x {
+            for x in 0..position.x {
                 space[y].push(Cell::new(x, y));
             }
         }
 
         return Self {
-            dimension: dimensions,
-            space: space,
+            population: 0,
+            position,
+            space,
         };
     }
 
-    fn terminal_render(&self) {
-        let separator = "-";
-        let separator = separator.repeat(self.dimension.x);
+    fn add_cell(&mut self, cell: Cell) {
+        self.space[cell.position.y][cell.position.x] = cell
+    }
+
+    fn randon_populate_world(&mut self, mut population: u32) {
+        while population > 0 {
+            let rand_x_poss = rand::rng().random_range(0..self.position.x);
+            let rand_y_poss = rand::rng().random_range(0..self.position.y);
+            let current_cell = &mut self.space[rand_y_poss][rand_x_poss];
+            if !current_cell.alive {
+                current_cell.alive = true;
+                population -= 1;
+            }
+        }
+    }
+}
+
+trait WorldDriver {
+    fn render(&self, world: &World);
+    fn handle_input(&mut self, word: &mut World);
+    fn sleep(&self);
+}
+
+struct TerminalDriver {
+    sleep_duration: Duration,
+}
+
+impl TerminalDriver {
+    fn new() -> Self {
+        Self {
+            sleep_duration: Duration::from_millis(FRAME_TIME as u64),
+        }
+    }
+
+    fn clean_terminal() {
+        print!("{}[2J", 27 as char);
+    }
+
+    fn show_horizontal_separator(world_x_dimension: usize) {
+        let separator = "-".repeat(world_x_dimension);
         print!("+");
         print!("{separator}");
         println!("+");
+    }
+}
 
-        for y in 0..self.dimension.y {
+impl WorldDriver for TerminalDriver {
+    fn render(&self, world: &World) {
+        TerminalDriver::clean_terminal();
+        TerminalDriver::show_horizontal_separator(world.position.x);
+        for y in 0..world.position.y {
             print!("|");
-            for x in 0..self.dimension.x {
-                match self.space[y][x].alive {
+            for x in 0..world.position.x {
+                match world.space[y][x].alive {
                     true => print!("O"),
                     false => print!(" "),
                 }
             }
-
             println!("|");
         }
 
-        print!("+");
-        print!("{separator}");
-        println!("+");
-
-        thread::sleep(Duration::from_millis(FRAME_TIME as u64));
+        TerminalDriver::show_horizontal_separator(world.position.x);
     }
 
-    fn add_cell(&mut self, cell: Cell) {
-        self.space[cell.y][cell.x] = cell
+    fn sleep(&self) {
+        thread::sleep(self.sleep_duration);
     }
 
-    fn clean_terminal(&self) {
-        print!("{}[2J", 27 as char);
-    }
-
-    fn manage_god_input(&mut self) {
+    fn handle_input(&mut self, world: &mut World) {
         let mut response_buffer = String::new();
 
         println!("Do you want to add a new life? [y/n] ");
@@ -118,37 +166,26 @@ impl World {
             return;
         }
 
-        self.add_cell(Cell::new_alive(
+        world.add_cell(Cell::new_alive(
             coordenates[0] as usize,
             coordenates[1] as usize,
         ));
     }
-
-    fn randon_populate_world(&mut self, mut population: u32) {
-        while population > 0 {
-            let rand_x_poss = rand::rng().random_range(0..self.dimension.x);
-            let rand_y_poss = rand::rng().random_range(0..self.dimension.y);
-            let current_cell = &mut self.space[rand_y_poss][rand_x_poss];
-            if !current_cell.alive {
-                current_cell.alive = true;
-                population -= 1;
-            }
-        }
-    }
 }
 
 fn main() {
-    let mut world = World::new(Dimensions {
+    let mut world = World::new(Position {
         x: WORLD_SIZE,
         y: WORLD_SIZE,
     });
 
     world.randon_populate_world(20);
 
+    let mut terminal_driver = TerminalDriver::new();
+
     loop {
-        world.clean_terminal();
-        world.add_cell(Cell::new_alive(1, 1));
-        world.terminal_render();
-        world.clean_terminal();
+        terminal_driver.render(&mut world);
+        terminal_driver.handle_input(&mut world);
+        terminal_driver.sleep();
     }
 }
