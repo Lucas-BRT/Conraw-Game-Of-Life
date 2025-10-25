@@ -32,12 +32,6 @@ struct Position {
     y: usize,
 }
 
-impl Position {
-    fn new(x: usize, y: usize) -> Self {
-        Self { x, y }
-    }
-}
-
 struct World {
     population: u64,
     position: Position,
@@ -64,7 +58,8 @@ impl World {
     }
 
     fn add_cell(&mut self, cell: Cell) {
-        self.space[cell.position.y][cell.position.x] = cell
+        self.space[cell.position.y][cell.position.x] = cell;
+        self.population += 1;
     }
 
     fn randon_populate_world(&mut self, mut population: u32) {
