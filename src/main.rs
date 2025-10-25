@@ -2,7 +2,9 @@ use rand::Rng;
 use std::{thread, time::Duration, usize};
 
 const INITIAL_POPULATION: u64 = 2000;
-const FRAME_TIME: usize = 100;
+const FRAME_TIME: usize = 90;
+const ALIVE_CELL_TERMINAL_CHAR: &str = "≋";
+const DEAD_CELL_TERMINAL_CHAR: char = ' ';
 
 #[derive(Debug, Clone, Copy)]
 struct Cell {
@@ -157,30 +159,38 @@ impl TerminalDriver {
         print!("{}[2J", 27 as char);
     }
 
-    fn show_horizontal_separator(world_x_dimension: usize) {
-        let separator = "-".repeat(world_x_dimension);
-        print!("+");
+    fn show_horizontal_separator(world_x_dimension: usize, top: bool) {
+        let separator = "━".repeat(world_x_dimension);
+        let corners;
+
+        if top {
+            corners = ["┏", "┓"];
+        } else {
+            corners = ["┗", "┛"];
+        }
+
+        print!("{}", corners[0]);
         print!("{separator}");
-        println!("+");
+        println!("{}", corners[1]);
     }
 }
 
 impl WorldDriver for TerminalDriver {
     fn render(&self, world: &mut World) {
         TerminalDriver::clean_terminal();
-        TerminalDriver::show_horizontal_separator(world.size.x);
+        TerminalDriver::show_horizontal_separator(world.size.x, true);
         for y in 0..world.size.y {
-            print!("|");
+            print!("┃");
             for x in 0..world.size.x {
                 match world.space[y][x].alive {
-                    true => print!("O"),
-                    false => print!(" "),
+                    true => print!("{ALIVE_CELL_TERMINAL_CHAR}"),
+                    false => print!("{DEAD_CELL_TERMINAL_CHAR}"),
                 }
             }
-            println!("|");
+            println!("┃");
         }
 
-        TerminalDriver::show_horizontal_separator(world.size.x);
+        TerminalDriver::show_horizontal_separator(world.size.x, false);
         world.tick();
     }
 
