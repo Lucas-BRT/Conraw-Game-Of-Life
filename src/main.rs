@@ -1,5 +1,5 @@
 use rand::Rng;
-use std::{io::stdin, thread, time::Duration, usize};
+use std::{thread, time::Duration, usize};
 
 const INITIAL_POPULATION: u64 = 2000;
 const FRAME_TIME: usize = 100;
@@ -139,7 +139,6 @@ impl World {
 
 trait WorldDriver {
     fn render(&self, world: &mut World);
-    fn handle_input(&mut self, word: &mut World);
     fn sleep(&self);
 }
 
@@ -188,47 +187,6 @@ impl WorldDriver for TerminalDriver {
     fn sleep(&self) {
         thread::sleep(self.sleep_duration);
     }
-
-    fn handle_input(&mut self, world: &mut World) {
-        let mut response_buffer = String::new();
-
-        println!("Do you want to add a new life? [y/n] ");
-        stdin()
-            .read_line(&mut response_buffer)
-            .expect("failed to get response from terminal");
-
-        if let Some(response) = response_buffer.trim_ascii().chars().nth(0) {
-            if response.to_ascii_lowercase() != 'y' {
-                return;
-            };
-        }
-
-        response_buffer.clear();
-
-        println!("Insert the X and Y position from the new life starts, Ex: 0 2");
-        stdin()
-            .read_line(&mut response_buffer)
-            .expect("failed to get response from terminal");
-
-        let coordenates = response_buffer
-            .split_ascii_whitespace()
-            .into_iter()
-            .map(|char| {
-                char.parse::<i32>()
-                    .expect("failed to parse input to number")
-            })
-            .collect::<Vec<i32>>();
-
-        if coordenates.len() < 2 {
-            eprintln!("At least 2 coordenates shoud be provided");
-            return;
-        }
-
-        world.add_cell(Cell::new_alive(
-            coordenates[0] as usize,
-            coordenates[1] as usize,
-        ));
-    }
 }
 
 fn main() {
@@ -245,7 +203,6 @@ fn main() {
 
     loop {
         terminal_driver.render(&mut world);
-        // terminal_driver.handle_input(&mut world);
         terminal_driver.sleep();
     }
 }
@@ -256,9 +213,11 @@ mod test {
 
     #[test]
     fn count_neighbors() {
+        let dimensions = term_size::dimensions().expect("failed to get terminal dimensions");
+
         let mut world = World::new(Position {
-            x: WORLD_SIZE,
-            y: WORLD_SIZE,
+            x: dimensions.0 - 2,
+            y: dimensions.1 - 3,
         });
 
         let first_cell = Cell::new_alive(0, 0);
@@ -272,16 +231,18 @@ mod test {
 
     #[test]
     fn count_up_neighbors() {
+        let dimensions = term_size::dimensions().expect("failed to get terminal dimensions");
+
         let mut world = World::new(Position {
-            x: WORLD_SIZE,
-            y: WORLD_SIZE,
+            x: dimensions.0 - 2,
+            y: dimensions.1 - 3,
         });
 
         let first_cell = Cell::new_alive(1, 1);
         world.add_cell(first_cell);
-        world.add_cell(Cell::new_alive(0, 1));
-        world.add_cell(Cell::new_alive(0, 1));
-        world.add_cell(Cell::new_alive(0, 1));
+        world.add_cell(Cell::new_alive(0, 0));
+        world.add_cell(Cell::new_alive(1, 0));
+        world.add_cell(Cell::new_alive(2, 0));
 
         assert_eq!(first_cell.count_neighbor(&world), 3);
     }
