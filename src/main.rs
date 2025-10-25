@@ -1,9 +1,8 @@
 use rand::Rng;
 use std::{io::stdin, thread, time::Duration, usize};
 
-const WORLD_SIZE: usize = 20;
-const INITIAL_POPULATION: u64 = 200;
-const FRAME_TIME: usize = 600;
+const INITIAL_POPULATION: u64 = 2000;
+const FRAME_TIME: usize = 100;
 
 #[derive(Debug, Clone, Copy)]
 struct Cell {
@@ -233,9 +232,11 @@ impl WorldDriver for TerminalDriver {
 }
 
 fn main() {
+    let dimensions = term_size::dimensions().expect("failed to get terminal dimensions");
+
     let mut world = World::new(Position {
-        x: WORLD_SIZE,
-        y: WORLD_SIZE,
+        x: dimensions.0 - 2,
+        y: dimensions.1 - 3,
     });
 
     world.randon_populate_world(INITIAL_POPULATION as u32);
