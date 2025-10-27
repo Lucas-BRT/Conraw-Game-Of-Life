@@ -1,5 +1,5 @@
 use rand::Rng;
-use std::{thread, time::Duration, usize};
+use std::{thread, time::Duration};
 
 const INITIAL_POPULATION: u64 = 2000;
 const FRAME_TIME: usize = 90;
@@ -20,13 +20,6 @@ impl Cell {
         }
     }
 
-    fn new_alive(x: usize, y: usize) -> Self {
-        Self {
-            alive: true,
-            position: Position { x, y },
-        }
-    }
-
     fn kill(&mut self) {
         self.alive = false;
     }
@@ -43,19 +36,18 @@ impl Cell {
                 let x = self.position.x as i32 + dx;
                 let y = self.position.y as i32 + dy;
 
-                if x >= 0 && y >= 0 {
-                    if let Some(row) = world.space.get(y as usize) {
-                        if let Some(cell) = row.get(x as usize) {
-                            if cell.alive {
-                                counter += 1;
-                            }
-                        }
-                    }
+                if x >= 0
+                    && y >= 0
+                    && let Some(row) = world.space.get(y as usize)
+                    && let Some(cell) = row.get(x as usize)
+                    && cell.alive
+                {
+                    counter += 1;
                 }
             }
         }
 
-        return counter;
+        counter
     }
 }
 
@@ -83,14 +75,15 @@ impl World {
             }
         }
 
-        return Self {
+        Self {
             start: true,
             population: 0,
             size,
             space,
-        };
+        }
     }
 
+    #[cfg(test)]
     fn add_cell(&mut self, cell: Cell) {
         self.space[cell.position.y][cell.position.x] = cell;
         self.population += 1;
@@ -115,7 +108,7 @@ impl World {
             return;
         }
 
-        for row in 0..self.size.y {
+        (0..self.size.y).for_each(|row| {
             for column in 0..self.size.x {
                 let a = &mut space[row][column];
                 let neighbor = a.count_neighbor(self);
@@ -127,13 +120,11 @@ impl World {
                     if neighbor > 3 {
                         a.kill();
                     }
-                } else {
-                    if neighbor == 3 {
-                        a.alive = true;
-                    }
+                } else if neighbor == 3 {
+                    a.alive = true;
                 }
             }
-        }
+        });
 
         self.space = space;
     }
@@ -161,13 +152,8 @@ impl TerminalDriver {
 
     fn show_horizontal_separator(world_x_dimension: usize, top: bool) {
         let separator = "━".repeat(world_x_dimension);
-        let corners;
 
-        if top {
-            corners = ["┏", "┓"];
-        } else {
-            corners = ["┗", "┛"];
-        }
+        let corners = if top { ["┏", "┓"] } else { ["┗", "┛"] };
 
         print!("{}", corners[0]);
         print!("{separator}");
@@ -230,11 +216,23 @@ mod test {
             y: dimensions.1 - 3,
         });
 
-        let first_cell = Cell::new_alive(0, 0);
+        let first_cell = Cell {
+            alive: true,
+            position: Position { x: 0, y: 0 },
+        };
         world.add_cell(first_cell);
-        world.add_cell(Cell::new_alive(0, 1));
-        world.add_cell(Cell::new_alive(1, 0));
-        world.add_cell(Cell::new_alive(1, 1));
+        world.add_cell(Cell {
+            alive: true,
+            position: Position { x: 0, y: 1 },
+        });
+        world.add_cell(Cell {
+            alive: true,
+            position: Position { x: 1, y: 0 },
+        });
+        world.add_cell(Cell {
+            alive: true,
+            position: Position { x: 1, y: 1 },
+        });
 
         assert_eq!(first_cell.count_neighbor(&world), 3);
     }
@@ -248,11 +246,23 @@ mod test {
             y: dimensions.1 - 3,
         });
 
-        let first_cell = Cell::new_alive(1, 1);
+        let first_cell = Cell {
+            alive: true,
+            position: Position { x: 1, y: 1 },
+        };
         world.add_cell(first_cell);
-        world.add_cell(Cell::new_alive(0, 0));
-        world.add_cell(Cell::new_alive(1, 0));
-        world.add_cell(Cell::new_alive(2, 0));
+        world.add_cell(Cell {
+            alive: true,
+            position: Position { x: 0, y: 0 },
+        });
+        world.add_cell(Cell {
+            alive: true,
+            position: Position { x: 1, y: 0 },
+        });
+        world.add_cell(Cell {
+            alive: true,
+            position: Position { x: 2, y: 0 },
+        });
 
         assert_eq!(first_cell.count_neighbor(&world), 3);
     }
